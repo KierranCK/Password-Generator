@@ -1,0 +1,149 @@
+import random
+import string
+import sqlite3
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+letters = string.ascii_letters
+numbers = string.digits
+symbols = string.punctuation
+
+
+def view():
+    connection = sqlite3.connect("myPasswordTable.db")
+    cursor = connection.cursor()
+    cursor.execute("SELECT * FROM codes")
+    result = cursor.fetchall()
+    print("(Displayed in the following order: Entry, Name, Code)")
+    for i in result:
+        print(i)
+    print("\n")
+
+
+def edit():
+    print("\nAvailable passcodes: ")
+    view()
+    option2 = input("Update or delete pre-existing codes? ").lower()
+    if option2 == "update" or option2 == "u":
+        try:
+            option3 = int(input("Which entry is to be updated? "))
+            option4 = input("Input new Name value: ")
+            connect = sqlite3.connect("myPasswordTable.db")
+            connect.execute("UPDATE codes SET name=? WHERE entry=?", (option4, option3 ))
+            connect.commit()
+            connect.close()
+            print("Entry successfully updated!")
+            view()
+            print("\n")
+        except ValueError:
+            print("Please enter a valid entry.")
+
+
+
+    elif option2 == "delete" or option2 =="d":
+
+        try:
+            option3 = input("Which entry is to be deleted? ")
+            while True:
+                option4 = input("Are you sure you want to delete entry " + option3 + "? ").lower()
+                if option4 == "yes" or option4 == "y":
+                    connect = sqlite3.connect("myPasswordTable.db")
+                    connect.execute("DELETE FROM codes WHERE entry=?", (option3))
+                    connect.commit()
+                    connect.close()
+                    print("Entry successfully deleted")
+                    view()
+                    print("\n")
+                    break
+
+                elif option4 == "no" or option4 == "n":
+                    break
+
+                else:
+                    print(option4 + " is not a valid option, please try again.")
+        except ValueError:
+            print("Please enter a valid entry.")
+
+    else:
+        print(option2 + " is not a valid option")
+
+
+def generate():
+    bool_dict = {"true": True, "false": False}
+
+    while True:
+        length = int(input("Password length: "))
+        symbols_allowed = input("Symbols allowed: ")
+        while True:
+            if symbols_allowed in bool_dict:
+                break
+            else:
+                print("Please enter either 'True' or 'False'")
+
+        if bool_dict[symbols_allowed.lower()]:
+            password = ""
+            selection = letters + numbers + symbols
+            for i in range(length):
+                password += random.choice(selection)
+            print("Generated password: " + password)
+
+        else:
+            password = ""
+            selection = letters + numbers
+            for i in range(length):
+                password += random.choice(selection)
+            print("Generated password: " + password)
+
+        data_save = input("This password can be saved to a database \nWould you like to save this password? ")
+        if data_save.lower() == "yes":
+            name = input("Password name/Prompt: ")
+            connection = sqlite3.connect("myPasswordTable.db")
+            cursor = connection.cursor()
+
+            try:
+                cursor.execute("""CREATE TABLE codes (  
+                            entry INTEGER PRIMARY KEY, 
+                            name VARCHAR(20),
+                            code VARCHAR(50))""")
+            except sqlite3.OperationalError:
+                cursor.execute("""INSERT INTO codes (name, code) VALUES (
+                            ?, ?)""", (name, password))
+                connection.commit()
+                connection.close()
+                print("Password saved!")
+                break
+
+            cursor.execute("""INSERT INTO codes (name, code) VALUES (
+                                    ?, ?)""", (name, password))
+            connection.commit()
+            connection.close()
+            print("Password saved!")
+
+        elif data_save.lower() == "no":
+            continue
+        else:
+            print("Please input a valid option.")
+
+
+
+print("===Password Handler===")
+while True:
+    print("=Main Menu=")
+    option = input("Generate, edit or view passwords? ").lower()
+
+    if option == "view" or option == "v":
+        view()
+
+    elif option == "generate" or option == "g":
+        try:
+            generate()
+
+        except ValueError:
+            print("Input appropriate value for password length")
+
+    elif option == "edit" or option == "e":
+        edit()
+
+    else:
+        print("Please input a valid option.")
